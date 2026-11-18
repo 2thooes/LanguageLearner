@@ -4,7 +4,7 @@ use argon2::{
 };
 use axum::{
     extract::State,
-    http::{HeaderMap, StatusCode},
+    http::{header, HeaderMap, StatusCode},
     response::{Html, IntoResponse, Redirect},
     routing::{get, post},
     Json, Router,
@@ -130,6 +130,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         // API routes
         .route("/api/register", post(register_handler))
         .route("/api/login", post(login_handler))
+        .route("/api/logout", post(logout_handler))
         .with_state(state);
     
     let listener  = tokio::net::TcpListener::bind(&addr).await.unwrap();
@@ -300,4 +301,17 @@ async fn login_handler(State(state): State<AppState>,Json(payload): Json<AuthReq
         [(axum::http::header::SET_COOKIE, auth_cookie(&token))],
         Json(AuthResponse { message: "Успешный вход".to_string() }),
     ))
+}
+
+async fn logout_handler() -> impl IntoResponse {
+    
+    let cookie = "auth_token=; HttpOnly; Path=/; Max-Age=0".to_string();
+
+    let response = (
+        StatusCode::OK,
+        [(header::SET_COOKIE, cookie)],
+        Json(AuthResponse { message: "Success".to_string() }),
+    );
+
+    response.into_response()
 }

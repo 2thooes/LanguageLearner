@@ -46,7 +46,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    messageDiv.textContent = 'Успешный вход! Перенаправление...';
+                    messageDiv.textContent = 'Success';
                     setTimeout(() => {
                         window.location.href = '/study';
                     }, 1000);
