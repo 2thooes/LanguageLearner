@@ -5,7 +5,7 @@ use argon2::{
 use axum::{
     extract::State,
     http::{header, HeaderMap, StatusCode},
-    response::{Html, IntoResponse, Redirect},
+    response::{Html, IntoResponse, Redirect,Response},
     routing::{get, post},
     Json, Router,
 };
@@ -237,18 +237,30 @@ async fn logout_handler() -> impl IntoResponse {
     response.into_response()
 }
 
-async fn me_handler(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<MeResponse>,StatusCode>{
-    let claims = verify_token(&headers, &state.jwt_secret).ok_or(StatusCode::UNAUTHORIZED)?;
-    let user_id: i64 = claims.sub.parse().map_err(|_| StatusCode::UNAUTHORIZED)?;
+async fn me_handler(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<MeResponse>,Response>{
+    let claims = verify_token(&headers, &state.jwt_secret).ok_or(unauthorized_with_clear_cookie())?;
+    let user_id: i64 = claims.sub.parse().map_err(|_| unauthorized_with_clear_cookie())?;
 
     let row: Option<(i64, String)> = sqlx::query_as("SELECT id, login FROM users WHERE id = ?")
         .bind(user_id)
         .fetch_optional(&state.pool)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|_| unauthorized_with_clear_cookie())?;
 
     // Токен валиден, но пользователя уже нет в БД: считаем неавторизованным
-    let (id, login) = row.ok_or(StatusCode::UNAUTHORIZED)?;
+    let (id, login) = match row{
+        Some(data) => data,
+        None => return Err(unauthorized_with_clear_cookie()),
+    };
 
     Ok(Json(MeResponse { id, login }))
+}
+
+fn unauthorized_with_clear_cookie() -> Response {
+    let cookie = "auth_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax".to_string();
+    (
+        StatusCode::UNAUTHORIZED,
+        [(header::SET_COOKIE, cookie)],
+        "Unauthorized".to_string(),
+    ).into_response()
 }
