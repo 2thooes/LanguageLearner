@@ -1,4 +1,3 @@
-use serde::Deserialize;
 use sqlx::SqlitePool;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -27,7 +26,6 @@ async fn get_or_create_level(pool: &SqlitePool,course_id: i64,level_number: i32,
     println!("[DB][levels] INSERT: id={}, number={}, '{}'", id, level_number, title);
     Ok(id)
 }
-
 /// returns true, if card was added, false, if it was already existing
 async fn insert_card_if_new(pool: &SqlitePool,level_id: i64,front: &str,back: &str,sort_order: i32) -> Result<bool, sqlx::Error> {
     let exists: Option<(i64,)> = sqlx::query_as(
@@ -249,7 +247,3 @@ async fn import_course_from_dir(pool: &SqlitePool,dir_path: &str,course_title: &
     Ok(())
 }
 
-/*pub async fn get_all_classes_by_user(pool: &SqlitePool,name: String) -> Vec<String>{
-    println!("get_all_classes_by_user called with {} argument", name);
-    vec!["заглушка1".to_string(),"заглушка2".to_string()]
-}*/
