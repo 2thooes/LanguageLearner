@@ -23,3 +23,13 @@ pub struct AppState {
     pub pool: SqlitePool,
     pub jwt_secret: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct CardCsvRow {
+    #[serde(rename = "StudiedLanguage")]
+    pub studied_language: String,
+    #[serde(rename = "AdditionalInformation")]
+    pub additional_info: String,
+    #[serde(rename = "StudentsLanguage")]
+    pub students_language: String,
+}
