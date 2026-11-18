@@ -262,14 +262,10 @@ async fn register_handler(State(state): State<AppState>,Json(payload): Json<Auth
     ))
 }
 
-async fn login_handler(
-    State(state): State<AppState>,
-    Json(payload): Json<AuthRequest>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let bad_creds = || (StatusCode::UNAUTHORIZED, "Неверный логин или пароль".to_string());
+async fn login_handler(State(state): State<AppState>,Json(payload): Json<AuthRequest>) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let bad_creds = || (StatusCode::UNAUTHORIZED, "Wrong login or password".to_string());//Anonimous func
 
-    let row: Option<(i64, String)> =
-        sqlx::query_as("SELECT id, password_hash FROM users WHERE login = ?")
+    let row: Option<(i64, String)> = sqlx::query_as("SELECT id, password_hash FROM users WHERE login = ?")
             .bind(payload.login.trim())
             .fetch_optional(&state.pool)
             .await
