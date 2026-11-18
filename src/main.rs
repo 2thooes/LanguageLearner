@@ -48,6 +48,8 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         .route("/api/login", post(login_handler))
         .route("/api/logout", post(logout_handler))
         .route("/api/me", get(me_handler))
+        .nest_service("/js", ServeDir::new("frontend/js"))
+        .nest_service("/styles", ServeDir::new("frontend/styles"))
         .with_state(state);
     
     let listener  = tokio::net::TcpListener::bind(&addr).await.unwrap();
