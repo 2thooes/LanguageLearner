@@ -126,6 +126,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         .route("/", get(root_handler))
         .route("/study", get(study_page_handler))
         .route("/register", get(register_page_handler))
+        .route("/login", get(login_page_handler))
         // API routes
         .route("/api/register", post(register_handler))
         .route("/api/login", post(login_handler))
@@ -158,7 +159,7 @@ fn verify_token(headers: &HeaderMap, secret: &str) -> Option<Claims> {
     .ok()
     .map(|d| d.claims)
 }
-// 1. Корень "/" — проверяем токен. Если есть -> на /study, нет -> на /register
+
 async fn root_handler(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
     if verify_token(&headers, &state.jwt_secret).is_some() {
         Redirect::to("/study").into_response()
@@ -167,20 +168,6 @@ async fn root_handler(State(state): State<AppState>, headers: HeaderMap) -> impl
     }
 }
 
-// 2. Страница "/register" — форма входа/регистрации
-async fn register_page_handler(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
-    // Если пользователь уже авторизован, ему нечего делать на странице регистрации
-    if verify_token(&headers, &state.jwt_secret).is_some() {
-        return Redirect::to("/study").into_response();
-    }
-
-    let html = tokio::fs::read_to_string("frontend/index.html")
-        .await
-        .unwrap_or_else(|_| "<h1>Страница не найдена</h1>".to_string());
-    Html(html).into_response()
-}
-
-// 3. Страница "/study" — защищена! Если нет токена, кидаем на /register
 async fn study_page_handler(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
     if verify_token(&headers, &state.jwt_secret).is_none() {
         return Redirect::to("/register").into_response();
@@ -192,7 +179,29 @@ async fn study_page_handler(State(state): State<AppState>, headers: HeaderMap) -
     Html(html).into_response()
 }
 
-// --- API ОБРАБОТЧИКИ (РЕГИСТРАЦИЯ И ВХОД) ---
+async fn register_page_handler(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    if verify_token(&headers, &state.jwt_secret).is_some() {
+        return Redirect::to("/study").into_response();
+    }
+
+    let html = tokio::fs::read_to_string("frontend/register.html")
+        .await
+        .unwrap_or_else(|_| "<h1>Page was not found</h1>".to_string());
+    Html(html).into_response()
+}
+
+async fn login_page_handler(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    if verify_token(&headers, &state.jwt_secret).is_some() {
+        return Redirect::to("/study").into_response();
+    }
+
+    let html = tokio::fs::read_to_string("frontend/login.html")
+        .await
+        .unwrap_or_else(|_| "<h1>Page was not found</h1>".to_string());
+    Html(html).into_response()
+}
+
+// --- API ---
 
 fn internal<E>(_: E) -> (StatusCode, String) {
     (StatusCode::INTERNAL_SERVER_ERROR, "Внутренняя ошибка".to_string())
@@ -202,28 +211,29 @@ fn auth_cookie(token: &str) -> String {
     format!("auth_token={}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax", token)
 }
 
-// Регистрация
+// Registration
 
-async fn register_handler(
-    State(state): State<AppState>,
-    Json(payload): Json<AuthRequest>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+async fn register_handler(State(state): State<AppState>,Json(payload): Json<AuthRequest>) -> Result<impl IntoResponse, (StatusCode, String)> {
     let login = payload.login.trim().to_string();
     let password = payload.password;
 
-    if login.is_empty() || password.len() < 8 || password.len() > 128 {
+    if login.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
-            "Пустой логин или пароль не от 8 до 128 символов".to_string(),
+            "Empty login".to_string(),
+        ));
+    }
+    if password.len() < 8 || password.len() > 64 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Password is too big or too small".to_string(),
         ));
     }
 
-    // Argon2 тяжёлый, поэтому считаем в отдельном потоке
+    // Argon2 is heavy, so computing in other thread
     let password_hash = tokio::task::spawn_blocking(move || {
         let salt = SaltString::generate(&mut OsRng);
-        Argon2::default()
-            .hash_password(password.as_bytes(), &salt)
-            .map(|h| h.to_string())
+        Argon2::default().hash_password(password.as_bytes(), &salt).map(|h| h.to_string())
     })
     .await
     .map_err(internal)?
@@ -248,7 +258,7 @@ async fn register_handler(
     Ok((
         StatusCode::CREATED,
         [(axum::http::header::SET_COOKIE, auth_cookie(&token))],
-        Json(AuthResponse { message: "Успешная регистрация".to_string() }),
+        Json(AuthResponse { message: "Successfull registration".to_string() }),
     ))
 }
 
