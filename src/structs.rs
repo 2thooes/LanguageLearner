@@ -39,3 +39,8 @@ pub struct MeResponse {
     pub id: i64,
     pub login: String,
 }
+
+#[derive(Serialize)]
+pub struct MyClassesResponse {
+    pub courses: Vec<String>,
+}

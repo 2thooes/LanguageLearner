@@ -17,7 +17,7 @@ use tower_http::services::ServeDir;
 use dotenvy::dotenv;
 mod database_functions;
 mod structs;
-use structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse};
+use structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse,MyClassesResponse};
 
 #[tokio::main]
 async fn main() -> Result<(),Box<dyn std::error::Error>> {
@@ -48,6 +48,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         .route("/api/login", post(login_handler))
         .route("/api/logout", post(logout_handler))
         .route("/api/me", get(me_handler))
+        .route("/api/mycourses", get(my_courses_handler))
         .nest_service("/js", ServeDir::new("frontend/js"))
         .nest_service("/styles", ServeDir::new("frontend/styles"))
         .with_state(state);
@@ -247,13 +248,37 @@ async fn me_handler(State(state): State<AppState>,headers: HeaderMap) -> Result<
         .await
         .map_err(|_| unauthorized_with_clear_cookie())?;
 
-    // Токен валиден, но пользователя уже нет в БД: считаем неавторизованным
+    let (id, login) = match row{
+        Some(data) => data,
+        None => return Err(unauthorized_with_clear_cookie())?,
+    };
+    
+
+    Ok(Json(MeResponse { id, login }))
+}
+
+async fn my_courses_handler(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<MyClassesResponse>,Response>{
+    let claims = verify_token(&headers, &state.jwt_secret).ok_or(unauthorized_with_clear_cookie())?;
+    let user_id: i64 = claims.sub.parse().map_err(|_| unauthorized_with_clear_cookie())?;
+
+    let row: Option<(i64, String)> = sqlx::query_as("SELECT id, login FROM users WHERE id = ?")
+        .bind(user_id)
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(|_| unauthorized_with_clear_cookie())?;
+
     let (id, login) = match row{
         Some(data) => data,
         None => return Err(unauthorized_with_clear_cookie()),
     };
+        // 2. Одним запросом через JOIN получаем все названия курсов пользователя
+    let courses: Vec<String> = sqlx::query_scalar("SELECT c.title FROM courses c JOIN user_courses uc ON c.id = uc.course_id WHERE uc.user_id = ?")
+        .bind(user_id)
+        .fetch_all(&state.pool)
+        .await
+        .map_err(|_| unauthorized_with_clear_cookie())?;
 
-    Ok(Json(MeResponse { id, login }))
+    Ok(Json(MyClassesResponse {courses}))
 }
 
 fn unauthorized_with_clear_cookie() -> Response {

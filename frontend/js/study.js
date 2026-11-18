@@ -10,6 +10,17 @@ async function getName(){
     else{
         window.location.href="/login";
     }
+    const courses = await fetch('/api/mycourses',{
+            credentials:'same-origin'
+        });
+    if (courses.ok){
+        const data = await courses.json();
+        //document.getElementById('username').textContent = data.login;
+        console.log("::" + JSON.stringify(data));
+    }
+    else{
+        window.location.href="/login";
+    }
 }
 getName();
 document.getElementById('logoutBtn').addEventListener('click', async () => {
