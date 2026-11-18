@@ -3,6 +3,7 @@ use sqlx::SqlitePool;
 use std::fs;
 use std::path::{Path, PathBuf};
 use crate::structs::CardCsvRow;
+
 async fn get_or_create_level(pool: &SqlitePool,course_id: i64,level_number: i32,title: &str) -> Result<i64, sqlx::Error> {
     let row: Option<(i64,)> =
         sqlx::query_as("SELECT id FROM levels WHERE course_id = ? AND title = ? LIMIT 1")
@@ -27,7 +28,7 @@ async fn get_or_create_level(pool: &SqlitePool,course_id: i64,level_number: i32,
     Ok(id)
 }
 
-/// Возвращает true, если карточка добавлена, false, если такая уже была
+/// returns true, if card was added, false, if it was already existing
 async fn insert_card_if_new(pool: &SqlitePool,level_id: i64,front: &str,back: &str,sort_order: i32) -> Result<bool, sqlx::Error> {
     let exists: Option<(i64,)> = sqlx::query_as(
         "SELECT id FROM cards WHERE level_id = ? AND front = ? AND back = ? LIMIT 1",
@@ -126,7 +127,7 @@ async fn init_cards(pool: &SqlitePool){
     import_course_from_dir(pool,"cards_data/en-ch","Chinese","Chinese course for english speakers","zh").await;
 }
 
-pub async fn import_course_from_dir(pool: &SqlitePool,dir_path: &str,course_title: &str,course_description: &str,language_code: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn import_course_from_dir(pool: &SqlitePool,dir_path: &str,course_title: &str,course_description: &str,language_code: &str) -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::new(dir_path);
     if !path.is_dir() {
         println!("[IMPORT] Папка '{}' не найдена, пропускаем импорт.", dir_path);
@@ -247,3 +248,8 @@ pub async fn import_course_from_dir(pool: &SqlitePool,dir_path: &str,course_titl
 
     Ok(())
 }
+
+/*pub async fn get_all_classes_by_user(pool: &SqlitePool,name: String) -> Vec<String>{
+    println!("get_all_classes_by_user called with {} argument", name);
+    vec!["заглушка1".to_string(),"заглушка2".to_string()]
+}*/

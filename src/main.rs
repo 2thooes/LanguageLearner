@@ -11,14 +11,13 @@ use axum::{
 };
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-//use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::env;
 use tower_http::services::ServeDir;
 use dotenvy::dotenv;
 mod database_functions;
 mod structs;
-use structs::{AppState, AuthRequest, AuthResponse, Claims};
+use structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse};
 
 #[tokio::main]
 async fn main() -> Result<(),Box<dyn std::error::Error>> {
@@ -48,6 +47,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         .route("/api/register", post(register_handler))
         .route("/api/login", post(login_handler))
         .route("/api/logout", post(logout_handler))
+        .route("/api/me", get(me_handler))
         .with_state(state);
     
     let listener  = tokio::net::TcpListener::bind(&addr).await.unwrap();
@@ -55,7 +55,6 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     axum::serve(listener,app).await.unwrap();
     Ok(())
 }
-
 
 fn create_jwt(user_id: i64, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let exp = (Utc::now() + Duration::days(7)).timestamp() as usize;
@@ -91,6 +90,8 @@ async fn study_page_handler(State(state): State<AppState>, headers: HeaderMap) -
         return Redirect::to("/register").into_response();
     }
 
+    //let options = database_functions::get_all_classes_by_user(&state.pool,"CHANGEME".to_string());
+
     let html = tokio::fs::read_to_string("frontend/study.html")
         .await
         .unwrap();
@@ -118,6 +119,7 @@ async fn login_page_handler(State(state): State<AppState>, headers: HeaderMap) -
         .unwrap_or_else(|_| "<h1>Page was not found</h1>".to_string());
     Html(html).into_response()
 }
+
 
 // --- API ---
 
@@ -231,4 +233,20 @@ async fn logout_handler() -> impl IntoResponse {
     );
 
     response.into_response()
+}
+
+async fn me_handler(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<MeResponse>,StatusCode>{
+    let claims = verify_token(&headers, &state.jwt_secret).ok_or(StatusCode::UNAUTHORIZED)?;
+    let user_id: i64 = claims.sub.parse().map_err(|_| StatusCode::UNAUTHORIZED)?;
+
+    let row: Option<(i64, String)> = sqlx::query_as("SELECT id, login FROM users WHERE id = ?")
+        .bind(user_id)
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Токен валиден, но пользователя уже нет в БД: считаем неавторизованным
+    let (id, login) = row.ok_or(StatusCode::UNAUTHORIZED)?;
+
+    Ok(Json(MeResponse { id, login }))
 }

@@ -33,3 +33,9 @@ pub struct CardCsvRow {
     #[serde(rename = "StudentsLanguage")]
     pub students_language: String,
 }
+
+#[derive(Serialize)]
+pub struct MeResponse {
+    pub id: i64,
+    pub login: String,
+}
