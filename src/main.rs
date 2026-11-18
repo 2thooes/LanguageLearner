@@ -11,97 +11,14 @@ use axum::{
 };
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use serde::{Deserialize, Serialize};
+//use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::env;
 use tower_http::services::ServeDir;
 use dotenvy::dotenv;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    sub: String,
-    exp: usize,
-}
-
-#[derive(Deserialize)]
-struct AuthRequest {
-    login: String,
-    password: String,
-}
-
-#[derive(Serialize)]
-struct AuthResponse {
-    message: String,
-}
-
-#[derive(Clone)]
-struct AppState {
-    pool: SqlitePool,
-    jwt_secret: String,
-}
-
-
-async fn init_db(pool: &SqlitePool) -> Result<(),sqlx::Error>{
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            login TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS courses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            description TEXT,
-            language TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS levels (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            course_id INTEGER,
-            level_number INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
-        );
-
-        CREATE TABLE IF NOT EXISTS cards (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            level_id INTEGER,
-            front TEXT NOT NULL,
-            back TEXT NOT NULL,
-            audio_url TEXT,
-            sort_order INTEGER NOT NULL,
-            FOREIGN KEY (level_id) REFERENCES levels(id) ON DELETE CASCADE
-        );
-
-        CREATE TABLE IF NOT EXISTS user_courses (
-            user_id INTEGER,
-            course_id INTEGER,
-            enrolled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (user_id, course_id),
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
-        );
-
-        CREATE TABLE IF NOT EXISTS user_card_progress (
-            user_id INTEGER,
-            card_id INTEGER,
-            box INTEGER DEFAULT 1,
-            status TEXT DEFAULT 'learning',
-            due_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (user_id, card_id),
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
-        );
-        "#,
-    )
-    .execute(pool)
-    .await?;
-
-    Ok(())
-}
+mod database_functions;
+mod structs;
+use structs::{AppState, AuthRequest, AuthResponse, Claims};
 
 #[tokio::main]
 async fn main() -> Result<(),Box<dyn std::error::Error>> {
@@ -113,7 +30,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:flashcards.db?mode=rwc".to_string());
     let pool = SqlitePool::connect(&database_url).await?;
 
-    init_db(&pool).await?;
+    database_functions::init_db(&pool).await?;
 
     let state = AppState {
         pool,
@@ -205,7 +122,7 @@ async fn login_page_handler(State(state): State<AppState>, headers: HeaderMap) -
 // --- API ---
 
 fn internal<E>(_: E) -> (StatusCode, String) {
-    (StatusCode::INTERNAL_SERVER_ERROR, "Внутренняя ошибка".to_string())
+    (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string())
 }
 
 fn auth_cookie(token: &str) -> String {
