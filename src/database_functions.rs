@@ -58,6 +58,10 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(),sqlx::Error>{
     )
     .execute(pool)
     .await?;
-
+    init_cards();
     Ok(())
+}
+
+async fn init_cards(){
+    
 }

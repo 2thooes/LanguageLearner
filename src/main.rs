@@ -166,7 +166,7 @@ async fn register_handler(State(state): State<AppState>,Json(payload): Json<Auth
     let user_id = match result {
         Ok(r) => r.last_insert_rowid(),
         Err(sqlx::Error::Database(e)) if e.is_unique_violation() => {
-            return Err((StatusCode::CONFLICT, "Логин уже занят".to_string()));
+            return Err((StatusCode::CONFLICT, "Nickname is taken".to_string()));
         }
         Err(e) => return Err(internal(e)),
     };
