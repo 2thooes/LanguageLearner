@@ -5,7 +5,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             const password = document.getElementById('password').value;
             const messageDiv = document.getElementById('message');
 
-            messageDiv.textContent = 'Отправка...';
+            messageDiv.textContent = 'Sending...';
 
             try {
                 const response = await fetch('/api/login', {
@@ -22,9 +22,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
                         window.location.href = '/study';
                     }, 1000);
                 } else {
-                    messageDiv.textContent = data.message || 'Ошибка входа';
+                    messageDiv.textContent = data.message || 'Login error';
                 }
             } catch (err) {
-                messageDiv.textContent = 'Ошибка подключения к серверу';
+                messageDiv.textContent = 'Error in server connection';
             }
         });
