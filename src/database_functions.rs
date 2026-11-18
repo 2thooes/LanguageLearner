@@ -1,5 +1,7 @@
+use serde::Deserialize;
 use sqlx::SqlitePool;
-
+use std::fs;
+use std::path::{Path, PathBuf};
 pub async fn init_db(pool: &SqlitePool) -> Result<(),sqlx::Error>{
     sqlx::query(
         r#"
@@ -58,10 +60,203 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(),sqlx::Error>{
     )
     .execute(pool)
     .await?;
-    init_cards();
+    init_cards(pool).await;
     Ok(())
 }
 
-async fn init_cards(){
-    
+async fn init_cards(pool: &SqlitePool){
+    println!("itin_cards");
+    import_course_from_dir(pool,"cards_data/en-ch","Chinese","Chinese course for english speakers","zh").await;
+}
+
+
+#[derive(Debug, Deserialize)]
+struct CardCsvRow {
+    #[serde(rename = "StudiedLanguage")]
+    studied_language: String,
+    #[serde(rename = "AdditionalInformation")]
+    additional_info: String,
+    #[serde(rename = "StudentsLanguage")]
+    students_language: String,
+}
+
+pub async fn import_course_from_dir(pool: &SqlitePool,dir_path: &str,course_title: &str,course_description: &str,language_code: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let path = Path::new(dir_path);
+    if !path.is_dir() {
+        println!("[IMPORT] Папка '{}' не найдена, пропускаем импорт.", dir_path);
+        return Ok(());
+    }
+
+    println!("[IMPORT] ===== Старт импорта из '{}' =====", dir_path);
+
+    // 1. Курс
+    let course_row: Option<(i64,)> =
+        sqlx::query_as("SELECT id FROM courses WHERE title = ? LIMIT 1")
+            .bind(course_title)
+            .fetch_optional(pool)
+            .await?;
+
+    let course_id = match course_row {
+        Some(row) => {
+            println!(
+                "[DB][courses] уже есть: id={}, title='{}'",
+                row.0, course_title
+            );
+            row.0
+        }
+        None => {
+            let res = sqlx::query(
+                "INSERT INTO courses (title, description, language) VALUES (?, ?, ?)",
+            )
+            .bind(course_title)
+            .bind(course_description)
+            .bind(language_code)
+            .execute(pool)
+            .await?;
+            let id = res.last_insert_rowid();
+            println!(
+                "[DB][courses] INSERT: id={}, title='{}', description='{}', language='{}'",
+                id, course_title, course_description, language_code
+            );
+            id
+        }
+    };
+
+    // 2. Файлы
+    let mut csv_files: Vec<PathBuf> = fs::read_dir(path)?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("csv"))
+        .collect();
+
+    csv_files.sort();
+    println!("[IMPORT] Найдено CSV-файлов: {}", csv_files.len());
+
+    let mut total_added = 0;
+    let mut total_skipped = 0;
+
+    // 3. Уровни
+    for (level_idx, file_path) in csv_files.into_iter().enumerate() {
+        let level_number = (level_idx + 1) as i32;
+
+        let level_title = file_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Level");
+
+        println!(
+            "[IMPORT] --- Файл '{}' -> уровень {} ---",
+            file_path.display(),
+            level_number
+        );
+
+        let level_row: Option<(i64,)> = sqlx::query_as(
+            "SELECT id FROM levels WHERE course_id = ? AND level_number = ? LIMIT 1",
+        )
+        .bind(course_id)
+        .bind(level_number)
+        .fetch_optional(pool)
+        .await?;
+
+        let level_id = match level_row {
+            Some(row) => {
+                println!(
+                    "[DB][levels] уже есть: id={}, level_number={}",
+                    row.0, level_number
+                );
+                row.0
+            }
+            None => {
+                let res = sqlx::query(
+                    "INSERT INTO levels (course_id, level_number, title) VALUES (?, ?, ?)",
+                )
+                .bind(course_id)
+                .bind(level_number)
+                .bind(level_title)
+                .execute(pool)
+                .await?;
+                let id = res.last_insert_rowid();
+                println!(
+                    "[DB][levels] INSERT: id={}, course_id={}, level_number={}, title='{}'",
+                    id, course_id, level_number, level_title
+                );
+                id
+            }
+        };
+
+        // 4. Карточки
+        let mut rdr = csv::Reader::from_path(&file_path)?;
+        let mut added_count = 0;
+        let mut skipped_count = 0;
+
+        for (card_idx, result) in rdr.deserialize().enumerate() {
+            let row: CardCsvRow = result?;
+
+            let front = row.students_language.trim().to_string();
+            let back = if row.additional_info.trim().is_empty() {
+                row.studied_language.trim().to_string()
+            } else {
+                format!(
+                    "{} ({})",
+                    row.studied_language.trim(),
+                    row.additional_info.trim()
+                )
+            };
+            let sort_order = (card_idx + 1) as i32;
+
+            let exists: Option<(i64,)> = sqlx::query_as(
+                "SELECT id FROM cards WHERE level_id = ? AND front = ? AND back = ? LIMIT 1",
+            )
+            .bind(level_id)
+            .bind(&front)
+            .bind(&back)
+            .fetch_optional(pool)
+            .await?;
+
+            match exists {
+                Some((existing_id,)) => {
+                    println!(
+                        "[DB][cards] SKIP (дубликат id={}): front='{}' | back='{}'",
+                        existing_id, front, back
+                    );
+                    skipped_count += 1;
+                }
+                None => {
+                    let res = sqlx::query(
+                        "INSERT INTO cards (level_id, front, back, sort_order) VALUES (?, ?, ?, ?)",
+                    )
+                    .bind(level_id)
+                    .bind(&front)
+                    .bind(&back)
+                    .bind(sort_order)
+                    .execute(pool)
+                    .await?;
+
+                    println!(
+                        "[DB][cards] INSERT: id={}, level_id={}, sort_order={}, front='{}' | back='{}'",
+                        res.last_insert_rowid(),
+                        level_id,
+                        sort_order,
+                        front,
+                        back
+                    );
+                    added_count += 1;
+                }
+            }
+        }
+
+        println!(
+            "[IMPORT] Уровень {} ('{}'): добавлено {}, пропущено {}",
+            level_number, level_title, added_count, skipped_count
+        );
+        total_added += added_count;
+        total_skipped += skipped_count;
+    }
+
+    println!(
+        "[IMPORT] ===== Готово. Курс '{}': всего добавлено {}, пропущено {} =====",
+        course_title, total_added, total_skipped
+    );
+
+    Ok(())
 }
