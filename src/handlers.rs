@@ -11,7 +11,7 @@ use axum::{
 };
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use crate::structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse,MyClassesResponse};
+use crate::structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse,MyClassesResponse,Course};
 
 fn create_jwt(user_id: i64, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let exp = (Utc::now() + Duration::days(7)).timestamp() as usize;
@@ -230,15 +230,54 @@ pub async fn my_courses_handler(State(state): State<AppState>,headers: HeaderMap
         .map_err(|_| unauthorized_with_clear_cookie())?;
 
     courses.push("Delete this1".to_string());
-    //courses.push("Delete this2".to_string());
-    //courses.push("New course".to_string());
-
     Ok(Json(MyClassesResponse {courses}))
 }
 
-/*pub async fn available_courses_hendler(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<Vec<String>>,Response>{
-    return 
-}*/
+pub async fn available_courses_hendler(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<Vec<Course>>,Response>{
+    let claims = verify_token(&headers, &state.jwt_secret)
+        .ok_or_else(unauthorized_with_clear_cookie)?;
+
+    let user_id: i64 = claims
+        .sub
+        .parse()
+        .map_err(|_| unauthorized_with_clear_cookie())?;
+
+    // Дополнительно проверяем, что пользователь всё ещё существует в БД
+    let user_exists: Option<i64> = sqlx::query_scalar("SELECT id FROM users WHERE id = ?")
+        .bind(user_id)
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(|_| {
+            (StatusCode::INTERNAL_SERVER_ERROR, "DB Error".to_string()).into_response()
+        })?;
+
+    if user_exists.is_none() {
+        return Err(unauthorized_with_clear_cookie());
+    }
+
+    let courses: Vec<Course> = sqlx::query_as(
+        "SELECT
+            c.title,
+            c.description,
+            c.user_language_code,
+            c.target_language_code
+         FROM courses c
+         WHERE NOT EXISTS (
+             SELECT 1
+             FROM user_courses uc
+             WHERE uc.course_id = c.id
+               AND uc.user_id = ?
+         )",
+    )
+    .bind(user_id)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|_| {
+        (StatusCode::INTERNAL_SERVER_ERROR, "DB Error".to_string()).into_response()
+    })?;
+    println!("FFFFFF");
+    Ok(Json(courses))
+}
 
 fn unauthorized_with_clear_cookie() -> Response {
     let cookie = "auth_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax".to_string();

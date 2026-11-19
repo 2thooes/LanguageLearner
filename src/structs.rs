@@ -1,4 +1,6 @@
 use sqlx::SqlitePool;
+use sqlx::FromRow;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -43,4 +45,17 @@ pub struct MeResponse {
 #[derive(Serialize)]
 pub struct MyClassesResponse {
     pub courses: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct AvailableClassesResponse{
+    pub courses: Vec<Course>,
+}
+
+#[derive(Serialize, FromRow)]
+pub struct Course{
+    pub title: String,
+    pub description: String,
+    pub user_language_code: String,
+    pub target_language_code: String,
 }

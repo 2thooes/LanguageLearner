@@ -67,6 +67,9 @@ async function openView(type, index = null) {
             <p>Здесь будет форма создания / импорта курса.</p>
         `;
         const availableCourses = await fetch(`/api/availableCourses`);//дописать тут
+        console.log(availableCourses.status);
+        const data = await availableCourses.json();
+        console.log(data);
         return;
     }
 
