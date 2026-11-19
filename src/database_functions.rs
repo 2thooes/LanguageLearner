@@ -123,7 +123,9 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(),sqlx::Error>{
 
 async fn init_cards(pool: &SqlitePool){
     println!("itin_cards");
+    import_course_from_dir(pool,"cards_data/ru-ch","ru","ch","Китайский HSK 3.0","Курс по китайскому для русскоговорящих").await;
     import_course_from_dir(pool,"cards_data/en-ch","en","ch","Chinese HSK 3.0","Chinese course for english speakers").await;
+    
 }
 
 async fn import_course_from_dir(pool: &SqlitePool,dir_path: &str,user_language_code: &str,target_language_code: &str,course_title: &str,course_description: &str) -> Result<(), Box<dyn std::error::Error>> {

@@ -73,6 +73,13 @@ async function openView(type, index = null) {
         for (let course of data){
             console.log(course.user_language_code);
         }
+        const languageSet = new Set();
+
+        for (const course of data) {
+            if (course.user_language_code) {
+                languageSet.add(course.user_language_code);
+            }
+        }
         return;
     }
 
