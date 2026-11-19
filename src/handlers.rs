@@ -226,11 +226,15 @@ pub async fn my_courses_handler(State(state): State<AppState>,headers: HeaderMap
         None => return Err(unauthorized_with_clear_cookie()),
     };
         // 2. Одним запросом через JOIN получаем все названия курсов пользователя
-    let courses: Vec<String> = sqlx::query_scalar("SELECT c.title FROM courses c JOIN user_courses uc ON c.id = uc.course_id WHERE uc.user_id = ?")
+    let mut courses: Vec<String> = sqlx::query_scalar("SELECT c.title FROM courses c JOIN user_courses uc ON c.id = uc.course_id WHERE uc.user_id = ?")
         .bind(user_id)
         .fetch_all(&state.pool)
         .await
         .map_err(|_| unauthorized_with_clear_cookie())?;
+
+    courses.push("Delete this1".to_string());
+    courses.push("Delete this2".to_string());
+    courses.push("New course".to_string());
 
     Ok(Json(MyClassesResponse {courses}))
 }
