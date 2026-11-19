@@ -72,7 +72,8 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(),sqlx::Error>{
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             description TEXT,
-            language TEXT NOT NULL
+            user_language_code TEXT NOT NULL,
+            target_language_code TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS levels (
@@ -122,10 +123,10 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(),sqlx::Error>{
 
 async fn init_cards(pool: &SqlitePool){
     println!("itin_cards");
-    import_course_from_dir(pool,"cards_data/en-ch","Chinese","Chinese course for english speakers","zh").await;
+    import_course_from_dir(pool,"cards_data/en-ch","en","ch","Chinese HSK 3.0","Chinese course for english speakers").await;
 }
 
-async fn import_course_from_dir(pool: &SqlitePool,dir_path: &str,course_title: &str,course_description: &str,language_code: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn import_course_from_dir(pool: &SqlitePool,dir_path: &str,user_language_code: &str,target_language_code: &str,course_title: &str,course_description: &str) -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::new(dir_path);
     if !path.is_dir() {
         println!("[IMPORT] Папка '{}' не найдена, пропускаем импорт.", dir_path);
@@ -151,17 +152,18 @@ async fn import_course_from_dir(pool: &SqlitePool,dir_path: &str,course_title: &
         }
         None => {
             let res = sqlx::query(
-                "INSERT INTO courses (title, description, language) VALUES (?, ?, ?)",
+                "INSERT INTO courses (title, description, user_language_code, target_language_code) VALUES (?, ?, ?, ?)",
             )
             .bind(course_title)
             .bind(course_description)
-            .bind(language_code)
+            .bind(user_language_code)
+            .bind(target_language_code)
             .execute(pool)
             .await?;
             let id = res.last_insert_rowid();
             println!(
-                "[DB][courses] INSERT: id={}, title='{}', description='{}', language='{}'",
-                id, course_title, course_description, language_code
+                "[DB][courses] INSERT: id={}, title='{}', description='{}', user_language_code='{}', target_language_code='{}'",
+                id, course_title, course_description, user_language_code,target_language_code
             );
             id
         }
