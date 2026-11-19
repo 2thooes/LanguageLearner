@@ -20,6 +20,7 @@ pub fn get_routes(state: AppState) -> Router{
         .route("/api/logout", post(handlers::logout_handler))
         .route("/api/me", get(handlers::me_handler))
         .route("/api/mycourses", get(handlers::my_courses_handler))
+        //.route("/api/availableCourses", get(handlers::available_courses_hendler))
         .nest_service("/js", ServeDir::new("frontend/js"))
         .nest_service("/styles", ServeDir::new("frontend/styles"))
         .with_state(state);

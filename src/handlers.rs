@@ -77,9 +77,7 @@ pub async fn login_page_handler(State(state): State<AppState>, headers: HeaderMa
     Html(html).into_response()
 }
 
-
 // --- API ---
-
 fn internal<E>(_: E) -> (StatusCode, String) {
     (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string())
 }
@@ -89,7 +87,6 @@ fn auth_cookie(token: &str) -> String {
 }
 
 // Registration
-
 pub async fn register_handler(State(state): State<AppState>,Json(payload): Json<AuthRequest>) -> Result<impl IntoResponse, (StatusCode, String)> {
     let login = payload.login.trim().to_string();
     let password = payload.password;
@@ -233,11 +230,15 @@ pub async fn my_courses_handler(State(state): State<AppState>,headers: HeaderMap
         .map_err(|_| unauthorized_with_clear_cookie())?;
 
     courses.push("Delete this1".to_string());
-    courses.push("Delete this2".to_string());
-    courses.push("New course".to_string());
+    //courses.push("Delete this2".to_string());
+    //courses.push("New course".to_string());
 
     Ok(Json(MyClassesResponse {courses}))
 }
+
+/*pub async fn available_courses_hendler(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<Vec<String>>,Response>{
+    return 
+}*/
 
 fn unauthorized_with_clear_cookie() -> Response {
     let cookie = "auth_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax".to_string();

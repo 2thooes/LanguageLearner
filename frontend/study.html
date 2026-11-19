@@ -4,11 +4,18 @@
         <script src="/js/study.js" defer></script>
     </head>   
     <body>
-        <h1>Welcome,<span id="username"></span></h1>
-        <h2>Your courses: </h2>
-        <ul id="coursesList"></ul>
-        <footer>
-            <button id = "logoutBtn">logout</button>
-        </footer>
-    </body>
+    <header>
+        <h1>Welcome, <span id="username"></span></h1>
+        <button id="logoutBtn">logout</button>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <h2>Your courses:</h2>
+            <ol id="coursesList"></ol>
+        </aside>
+
+        <main id="contentPane" class="content"></main>
+    </div>
+</body>
 </html>
