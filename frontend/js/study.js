@@ -70,6 +70,9 @@ async function openView(type, index = null) {
         console.log(availableCourses.status);
         const data = await availableCourses.json();
         console.log(data);
+        for (let course of data){
+            console.log(course.user_language_code);
+        }
         return;
     }
 
