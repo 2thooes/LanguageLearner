@@ -76,55 +76,13 @@ function renderCoursesByLang(lang) {
         coursesContainer.appendChild(ul);
     }
 
-async function openView(type, index = null) {
-    const pane = document.getElementById('contentPane');
-    renderSidebar(type, index);
-
-    if (type === 'add') {
-        pane.innerHTML = `
-            <h2>Add new course</h2>
-            <div id="languageList"></div>
-        `;
-        const availableCourses = await fetch(`/api/availableCourses`);//дописать тут
-        
-        const data = await availableCourses.json(); //Getting all possible courses
-        const languageSet = new Set(); //Selcting only user languages
-        for (const course of data) {
-            if (course.user_language_code) {
-                languageSet.add(course.user_language_code);
-            }
-        }
-
-        const languageList = document.getElementById("languageList");
-
-        const currentParams = new URLSearchParams(window.location.search);//тут читаем поисковую строку
-        let selectedLang = currentParams.get('lang');
-
-        for (const lang of languageSet) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.textContent = lang;
-
-            btn.addEventListener('click', () => {
-                selectedLang = lang;
-                // Сохраняем view=add и добавляем/обновляем параметр lang в адресной строке
-                setUrlState({ view: 'add', lang });
-                renderCoursesByLang(selectedLang);
-            });
-
-            languageList.appendChild(btn);
-        }
-
-        console.log(languageSet);
-        return;
-    }
-
-    const courseTitle = realCourses[index];
+async function renderCourseContent(pane){
+    
     pane.innerHTML = `
-        <h2>${courseTitle}</h2>
+        <h2>какой то курс(удали меня)</h2>
         <p id="courseBody">Loading...</p>
     `;
-
+    /*const courseTitle = realCourses[index];
     // Запрос к БД за содержимым конкретного курса
     const res = await fetch(`/api/courses/${index}`, { credentials: 'same-origin' });
     const bodyEl = document.getElementById('courseBody');
@@ -135,7 +93,74 @@ async function openView(type, index = null) {
         bodyEl.textContent = JSON.stringify(courseData);
     } else {
         bodyEl.textContent = 'Failed to load course data';
+    }*/
+   console.log("запрос и обработка конкретного курса");
+}
+
+async function renderUsersLanguageSelector(pane){
+    pane.innerHTML = `
+        <h2>Add new course</h2>
+        <div id="languageList"></div>
+    `;//creating html template for future content
+    const availableCourses = await fetch(`/api/availableCourses`);//дописать тут
+        
+    const data = await availableCourses.json(); //Getting all possible courses
+    const languageSet = new Set(); //Selcting only user languages
+    for (const course of data) {
+        if (course.user_language_code) {
+            languageSet.add(course.user_language_code);
+        }
     }
+
+    const primaryLanguageList = document.getElementById("languageList");
+
+    //const currentParams = new URLSearchParams(window.location.search);//тут читаем поисковую строку
+    //let selectedLang = currentParams.get('lang');
+
+    for (const lang of languageSet) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = lang;
+
+        btn.addEventListener('click', () => {
+            selectedLang = lang;
+            // Сохраняем view=add и добавляем/обновляем параметр lang в адресной строке
+            setUrlState({ view: 'add', lang: selectedLang});
+            renderTargetLanguageSelector(pane);
+        });
+        primaryLanguageList.appendChild(btn);
+    }
+
+    return;
+}
+
+async function renderTargetLanguageSelector(pane){
+    pane.innerHTML = `
+        <h2>Add new course</h2>
+        <div>zzzzzz</div>
+    `;// CONTINUE HERE
+}
+
+async function openView(type, index = null) {
+    const pane = document.getElementById('contentPane');
+    renderSidebar(type, index);
+
+    if (type === 'add') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('lang')) {
+            renderTargetLanguageSelector(pane);
+            return;
+        }
+        else{
+            renderUsersLanguageSelector(pane);
+            return;
+        }
+    }
+    else{
+        renderCourseContent(pane);
+        return;
+    }
+    
 }
 
 function syncWithUrl() {
