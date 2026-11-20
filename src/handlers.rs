@@ -275,7 +275,6 @@ pub async fn available_courses_hendler(State(state): State<AppState>,headers: He
     .map_err(|_| {
         (StatusCode::INTERNAL_SERVER_ERROR, "DB Error".to_string()).into_response()
     })?;
-    println!("FFFFFF");
     Ok(Json(courses))
 }
 

@@ -57,6 +57,25 @@ function renderSidebar(activeType, activeIndex = null) {
     list.appendChild(addLi);
 }
 
+function renderCoursesByLang(lang) {
+        coursesContainer.innerHTML = '';
+        if (!lang) return;
+
+        const matching = data.filter((c) => c.user_language_code === lang);
+        if (matching.length === 0) {
+            coursesContainer.textContent = 'No courses for this language';
+            return;
+        }
+
+        const ul = document.createElement('ul');
+        for (const course of matching) {
+            const li = document.createElement('li');
+            li.textContent = `${course.title} (${course.user_language_code} -> ${course.target_language_code})`;
+            ul.appendChild(li);
+        }
+        coursesContainer.appendChild(ul);
+    }
+
 async function openView(type, index = null) {
     const pane = document.getElementById('contentPane');
     renderSidebar(type, index);
@@ -64,22 +83,39 @@ async function openView(type, index = null) {
     if (type === 'add') {
         pane.innerHTML = `
             <h2>Add new course</h2>
-            <p>Здесь будет форма создания / импорта курса.</p>
+            <div id="languageList"></div>
         `;
         const availableCourses = await fetch(`/api/availableCourses`);//дописать тут
-        console.log(availableCourses.status);
-        const data = await availableCourses.json();
-        console.log(data);
-        for (let course of data){
-            console.log(course.user_language_code);
-        }
-        const languageSet = new Set();
-
+        
+        const data = await availableCourses.json(); //Getting all possible courses
+        const languageSet = new Set(); //Selcting only user languages
         for (const course of data) {
             if (course.user_language_code) {
                 languageSet.add(course.user_language_code);
             }
         }
+
+        const languageList = document.getElementById("languageList");
+
+        const currentParams = new URLSearchParams(window.location.search);//тут читаем поисковую строку
+        let selectedLang = currentParams.get('lang');
+
+        for (const lang of languageSet) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = lang;
+
+            btn.addEventListener('click', () => {
+                selectedLang = lang;
+                // Сохраняем view=add и добавляем/обновляем параметр lang в адресной строке
+                setUrlState({ view: 'add', lang });
+                renderCoursesByLang(selectedLang);
+            });
+
+            languageList.appendChild(btn);
+        }
+
+        console.log(languageSet);
         return;
     }
 
