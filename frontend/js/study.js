@@ -163,7 +163,7 @@ async function renderTargetLanguageSelector(pane,data){
                     if (!res.ok) {
                         const errText = await res.text();
                         console.error('Failed to add course:', res.status, errText);
-                        addBtn.disabled = false;
+                        btn.disabled = false;
                         return;
                     }
 
@@ -171,7 +171,7 @@ async function renderTargetLanguageSelector(pane,data){
                     await initStudyPage();
                 } catch (err) {
                     console.error('Network error:', err);
-                    addBtn.disabled = false;
+                    btn.disabled = false;
                 }
             });
             card.appendChild(btn);
@@ -239,7 +239,28 @@ async function initStudyPage() {
     }
     const meData = await meRes.json();
     document.getElementById('username').textContent = meData.login;
-
+const logoutBtn = document.getElementById('logoutBtn');
+console.log("1");
+if (logoutBtn) {
+    console.log("2");
+    logoutBtn.addEventListener('click', async () => {
+        console.log('logout clicked');
+        try {
+            const response = await fetch('/api/logout', {
+                method: 'POST',
+                credentials: 'same-origin',
+            });
+            if (response.ok) {
+                window.location.href = '/login';
+            } else {
+                console.error('Logout failed with status:', response.status);
+            }
+        } catch (err) {
+            console.error('Logout fetch error:', err);
+        }
+    });
+    console.log("3");
+}
     const coursesRes = await fetch('/api/mycourses', { credentials: 'same-origin' });
     if (!coursesRes.ok) {
         window.location.href = '/login';
@@ -259,5 +280,6 @@ window.addEventListener('popstate', () => {
         syncWithUrl();
     }
 });
+
 
 initStudyPage();

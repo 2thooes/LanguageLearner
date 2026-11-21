@@ -177,7 +177,7 @@ pub async fn login_handler(State(state): State<AppState>,Json(payload): Json<Aut
 }
 
 pub async fn logout_handler() -> impl IntoResponse {
-    
+    println!("aaaaaaa");
     let cookie = "auth_token=; HttpOnly; Path=/; Max-Age=0".to_string();
 
     let response = (
@@ -278,8 +278,12 @@ pub async fn available_courses_hendler(State(state): State<AppState>,headers: He
     Ok(Json(courses))
 }
 
-pub async fn add_user_courses(State(state): State<AppState>,headers: HeaderMap){
+pub async fn add_user_courses(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<String>,Response>{
     println!("получен запрос на добавление курса");
+    let claims = verify_token(&headers, &state.jwt_secret).ok_or(unauthorized_with_clear_cookie())?;
+    let user_id: i64 = claims.sub.parse().map_err(|_| unauthorized_with_clear_cookie())?;
+    println!("{}",user_id);
+    Ok(Json("Ok".to_string()))
 }
 
 fn unauthorized_with_clear_cookie() -> Response {
