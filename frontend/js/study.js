@@ -82,6 +82,7 @@ async function renderCourseContent(pane,data){
         <h2>какой то курс(удали меня)</h2>
         <p id="courseBody">Loading...</p>
     `;
+    
     /*const courseTitle = realCourses[index];
     // Запрос к БД за содержимым конкретного курса
     const res = await fetch(`/api/courses/${index}`, { credentials: 'same-origin' });
@@ -137,8 +138,29 @@ async function renderTargetLanguageSelector(pane,data){
     const lang = params.get('lang');
     pane.innerHTML = `
         <h2>Add new course</h2>
-        <div>zzzzzz</div>
+        <div id=availableCourses></div>
     `;// CONTINUE HERE
+    const availableCoursesList = document.getElementById("availableCourses");
+    for (let course of data){
+        if(course.user_language_code === lang){
+            const card = document.createElement('div');
+
+            const titleEl = document.createElement('h3');
+            titleEl.textContent = course.title;
+
+            const descEl = document.createElement('p');
+            descEl.textContent = course.description;
+
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.textContent = `Add (${course.user_language_code} -> ${course.target_language_code})`;
+
+            card.appendChild(titleEl);
+            card.appendChild(descEl);
+            card.appendChild(addBtn);
+            availableCoursesList.appendChild(card);
+        }
+    }
     console.log(lang);
     console.log(data);
 }
