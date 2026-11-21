@@ -251,3 +251,26 @@ async fn import_course_from_dir(pool: &SqlitePool,dir_path: &str,user_language_c
     Ok(())
 }
 
+pub async fn add_new_course_for_user(pool: &SqlitePool,user_id: i64,primary_language: &str,chosen_language: &str) -> Result<bool,sqlx::Error>{
+    let course_id: Option<i64> = sqlx::query_scalar(
+        "SELECT id FROM courses WHERE user_language_code = ? AND target_language_code = ?",
+    )
+    .bind(primary_language)
+    .bind(chosen_language)
+    .fetch_optional(pool)
+    .await?;
+
+    let Some(course_id) = course_id else {
+        return Ok(false);
+    };
+
+    sqlx::query("INSERT OR IGNORE INTO user_courses (user_id, course_id) VALUES (?, ?)")
+        .bind(user_id)
+        .bind(course_id)
+        .execute(pool)
+        .await?;
+
+    Ok(true)
+}
+
+

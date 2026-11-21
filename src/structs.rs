@@ -59,3 +59,9 @@ pub struct Course{
     pub user_language_code: String,
     pub target_language_code: String,
 }
+
+#[derive(Debug,Deserialize)]
+pub struct AddUserCourseRequest {
+    pub primary_language: String,
+    pub chosen_language: String,
+}

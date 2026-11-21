@@ -157,7 +157,7 @@ async function renderTargetLanguageSelector(pane,data){
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'same-origin',
-                        body: JSON.stringify({primary_language: lang, title: course.title }),
+                        body: JSON.stringify({primary_language: lang, chosen_language: course.target_language_code}),
                     });
 
                     if (!res.ok) {
@@ -240,9 +240,7 @@ async function initStudyPage() {
     const meData = await meRes.json();
     document.getElementById('username').textContent = meData.login;
 const logoutBtn = document.getElementById('logoutBtn');
-console.log("1");
 if (logoutBtn) {
-    console.log("2");
     logoutBtn.addEventListener('click', async () => {
         console.log('logout clicked');
         try {
@@ -259,7 +257,7 @@ if (logoutBtn) {
             console.error('Logout fetch error:', err);
         }
     });
-    console.log("3");
+
 }
     const coursesRes = await fetch('/api/mycourses', { credentials: 'same-origin' });
     if (!coursesRes.ok) {

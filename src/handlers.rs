@@ -11,7 +11,8 @@ use axum::{
 };
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use crate::structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse,MyClassesResponse,Course};
+use crate::structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse,MyClassesResponse,Course,AddUserCourseRequest};
+use crate::database_functions;
 
 fn create_jwt(user_id: i64, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let exp = (Utc::now() + Duration::days(7)).timestamp() as usize;
@@ -229,7 +230,6 @@ pub async fn my_courses_handler(State(state): State<AppState>,headers: HeaderMap
         .await
         .map_err(|_| unauthorized_with_clear_cookie())?;
 
-    courses.push("Delete this1".to_string());
     Ok(Json(MyClassesResponse {courses}))
 }
 
@@ -278,11 +278,24 @@ pub async fn available_courses_hendler(State(state): State<AppState>,headers: He
     Ok(Json(courses))
 }
 
-pub async fn add_user_courses(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<String>,Response>{
+pub async fn add_user_courses(State(state): State<AppState>,headers: HeaderMap,Json(payload): Json<AddUserCourseRequest>) -> Result<Json<String>,Response>{
     println!("получен запрос на добавление курса");
     let claims = verify_token(&headers, &state.jwt_secret).ok_or(unauthorized_with_clear_cookie())?;
     let user_id: i64 = claims.sub.parse().map_err(|_| unauthorized_with_clear_cookie())?;
-    println!("{}",user_id);
+    let res = database_functions::add_new_course_for_user(&state.pool,user_id,&payload.primary_language,&payload.chosen_language)
+    .await
+    .map_err(|_|{
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database error".to_string(),
+        )
+        .into_response()
+    })?;
+
+    if !res {
+        return Err((StatusCode::NOT_FOUND, "Course not found".to_string()).into_response());
+    }
+
     Ok(Json("Ok".to_string()))
 }
 
