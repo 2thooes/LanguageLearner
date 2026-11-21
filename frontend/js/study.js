@@ -76,7 +76,7 @@ function renderCoursesByLang(lang) {
         coursesContainer.appendChild(ul);
     }
 
-async function renderCourseContent(pane){
+async function renderCourseContent(pane,data){
     
     pane.innerHTML = `
         <h2>какой то курс(удали меня)</h2>
@@ -97,14 +97,12 @@ async function renderCourseContent(pane){
    console.log("запрос и обработка конкретного курса");
 }
 
-async function renderUsersLanguageSelector(pane){
+async function renderUsersLanguageSelector(pane,data){
     pane.innerHTML = `
         <h2>Add new course</h2>
         <div id="languageList"></div>
     `;//creating html template for future content
-    const availableCourses = await fetch(`/api/availableCourses`);//дописать тут
-        
-    const data = await availableCourses.json(); //Getting all possible courses
+    
     const languageSet = new Set(); //Selcting only user languages
     for (const course of data) {
         if (course.user_language_code) {
@@ -126,7 +124,7 @@ async function renderUsersLanguageSelector(pane){
             selectedLang = lang;
             // Сохраняем view=add и добавляем/обновляем параметр lang в адресной строке
             setUrlState({ view: 'add', lang: selectedLang});
-            renderTargetLanguageSelector(pane);
+            renderTargetLanguageSelector(pane,data);
         });
         primaryLanguageList.appendChild(btn);
     }
@@ -134,30 +132,35 @@ async function renderUsersLanguageSelector(pane){
     return;
 }
 
-async function renderTargetLanguageSelector(pane){
+async function renderTargetLanguageSelector(pane,data){
+    const params = new URLSearchParams(window.location.search);
+    const lang = params.get('lang');
     pane.innerHTML = `
         <h2>Add new course</h2>
         <div>zzzzzz</div>
     `;// CONTINUE HERE
+    console.log(lang);
+    console.log(data);
 }
 
 async function openView(type, index = null) {
     const pane = document.getElementById('contentPane');
     renderSidebar(type, index);
-
+    const availableCourses = await fetch(`/api/availableCourses`);
+    const data = await availableCourses.json();
     if (type === 'add') {
         const params = new URLSearchParams(window.location.search);
         if (params.has('lang')) {
-            renderTargetLanguageSelector(pane);
+            renderTargetLanguageSelector(pane,data);
             return;
         }
         else{
-            renderUsersLanguageSelector(pane);
+            renderUsersLanguageSelector(pane,data);
             return;
         }
     }
     else{
-        renderCourseContent(pane);
+        renderCourseContent(pane,data);
         return;
     }
     
