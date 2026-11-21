@@ -141,28 +141,43 @@ async function renderTargetLanguageSelector(pane,data){
         <div id=availableCourses></div>
     `;// CONTINUE HERE
     const availableCoursesList = document.getElementById("availableCourses");
-    for (let course of data){
-        if(course.user_language_code === lang){
+    for (let course of data) {
+        if (course.user_language_code === lang) {
             const card = document.createElement('div');
 
-            const titleEl = document.createElement('h3');
-            titleEl.textContent = course.title;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.whiteSpace = 'pre-line';
+            btn.textContent = `${course.title}\n${course.description}`;
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
 
-            const descEl = document.createElement('p');
-            descEl.textContent = course.description;
+                try {
+                    const res = await fetch('/api/addUserCourses', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({primary_language: lang, title: course.title }),
+                    });
 
-            const addBtn = document.createElement('button');
-            addBtn.type = 'button';
-            addBtn.textContent = `Add (${course.user_language_code} -> ${course.target_language_code})`;
+                    if (!res.ok) {
+                        const errText = await res.text();
+                        console.error('Failed to add course:', res.status, errText);
+                        addBtn.disabled = false;
+                        return;
+                    }
 
-            card.appendChild(titleEl);
-            card.appendChild(descEl);
-            card.appendChild(addBtn);
+                    // Обновляем список курсов пользователя и перерисовываем интерфейс
+                    await initStudyPage();
+                } catch (err) {
+                    console.error('Network error:', err);
+                    addBtn.disabled = false;
+                }
+            });
+            card.appendChild(btn);
             availableCoursesList.appendChild(card);
         }
     }
-    console.log(lang);
-    console.log(data);
 }
 
 async function openView(type, index = null) {

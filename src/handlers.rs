@@ -278,6 +278,10 @@ pub async fn available_courses_hendler(State(state): State<AppState>,headers: He
     Ok(Json(courses))
 }
 
+pub async fn add_user_courses(State(state): State<AppState>,headers: HeaderMap){
+    println!("получен запрос на добавление курса");
+}
+
 fn unauthorized_with_clear_cookie() -> Response {
     let cookie = "auth_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax".to_string();
     (
