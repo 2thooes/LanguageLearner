@@ -223,7 +223,7 @@ pub async fn my_courses_handler(State(state): State<AppState>,headers: HeaderMap
         Some(data) => data,
         None => return Err(unauthorized_with_clear_cookie()),
     };
-        // 2. Одним запросом через JOIN получаем все названия курсов пользователя
+    // 2. Одним запросом через JOIN получаем все названия курсов пользователя
     let mut courses: Vec<String> = sqlx::query_scalar("SELECT c.title FROM courses c JOIN user_courses uc ON c.id = uc.course_id WHERE uc.user_id = ?")
         .bind(user_id)
         .fetch_all(&state.pool)
@@ -297,6 +297,10 @@ pub async fn add_user_courses(State(state): State<AppState>,headers: HeaderMap,J
     }
 
     Ok(Json("Ok".to_string()))
+}
+
+pub async fn get_course_content(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<Vec<String>>,Response>{
+    Ok(vec!["qwe".to_string()].into())
 }
 
 fn unauthorized_with_clear_cookie() -> Response {

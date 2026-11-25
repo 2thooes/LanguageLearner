@@ -22,6 +22,7 @@ pub fn get_routes(state: AppState) -> Router{
         .route("/api/mycourses", get(handlers::my_courses_handler))
         .route("/api/availableCourses", get(handlers::available_courses_hendler))
         .route("/api/addUserCourses", post(handlers::add_user_courses))
+        .route("/api/course", get(handlers::get_course_content))
         .nest_service("/js", ServeDir::new("frontend/js"))
         .nest_service("/styles", ServeDir::new("frontend/styles"))
         .with_state(state);

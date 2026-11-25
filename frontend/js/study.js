@@ -76,14 +76,12 @@ function renderCoursesByLang(lang) {
         coursesContainer.appendChild(ul);
     }
 
-async function renderCourseContent(pane,data){
+async function renderCourseContent(pane,data,index){
     
     pane.innerHTML = `
         <h2>какой то курс(удали меня)</h2>
         <p id="courseBody">Loading...</p>
     `;
-    
-    /*const courseTitle = realCourses[index];
     // Запрос к БД за содержимым конкретного курса
     const res = await fetch(`/api/courses/${index}`, { credentials: 'same-origin' });
     const bodyEl = document.getElementById('courseBody');
@@ -94,7 +92,7 @@ async function renderCourseContent(pane,data){
         bodyEl.textContent = JSON.stringify(courseData);
     } else {
         bodyEl.textContent = 'Failed to load course data';
-    }*/
+    }
    console.log("запрос и обработка конкретного курса");
 }
 
@@ -122,7 +120,7 @@ async function renderUsersLanguageSelector(pane,data){
         btn.textContent = lang;
 
         btn.addEventListener('click', () => {
-            selectedLang = lang;
+            let selectedLang = lang;
             // Сохраняем view=add и добавляем/обновляем параметр lang в адресной строке
             setUrlState({ view: 'add', lang: selectedLang});
             renderTargetLanguageSelector(pane,data);
@@ -188,16 +186,16 @@ async function openView(type, index = null) {
     if (type === 'add') {
         const params = new URLSearchParams(window.location.search);
         if (params.has('lang')) {
-            renderTargetLanguageSelector(pane,data);
+            renderTargetLanguageSelector(pane,data).await;
             return;
         }
         else{
-            renderUsersLanguageSelector(pane,data);
+            renderUsersLanguageSelector(pane,data).await;
             return;
         }
     }
     else{
-        renderCourseContent(pane,data);
+        renderCourseContent(pane,data,index).await;
         return;
     }
     
@@ -239,26 +237,8 @@ async function initStudyPage() {
     }
     const meData = await meRes.json();
     document.getElementById('username').textContent = meData.login;
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-        console.log('logout clicked');
-        try {
-            const response = await fetch('/api/logout', {
-                method: 'POST',
-                credentials: 'same-origin',
-            });
-            if (response.ok) {
-                window.location.href = '/login';
-            } else {
-                console.error('Logout failed with status:', response.status);
-            }
-        } catch (err) {
-            console.error('Logout fetch error:', err);
-        }
-    });
+    
 
-}
     const coursesRes = await fetch('/api/mycourses', { credentials: 'same-origin' });
     if (!coursesRes.ok) {
         window.location.href = '/login';
@@ -279,5 +259,24 @@ window.addEventListener('popstate', () => {
     }
 });
 
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+        console.log('logout clicked');
+        try {
+            const response = await fetch('/api/logout', {
+                method: 'POST',
+                credentials: 'same-origin',
+            });
+            if (response.ok) {
+                window.location.href = '/login';
+            } else {
+                console.error('Logout failed with status:', response.status);
+            }
+        } catch (err) {
+            console.error('Logout fetch error:', err);
+        }
+    });
+}
 
 initStudyPage();
