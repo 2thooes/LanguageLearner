@@ -83,7 +83,7 @@ async function renderCourseContent(pane,data,index){
         <p id="courseBody">Loading...</p>
     `;
     // Запрос к БД за содержимым конкретного курса
-    const res = await fetch(`/api/courses/${index}`, { credentials: 'same-origin' });
+    const res = await fetch(`/api/course?id=${encodeURIComponent(index)}`, { credentials: 'same-origin' });
     const bodyEl = document.getElementById('courseBody');
     if (!bodyEl) return;
 
