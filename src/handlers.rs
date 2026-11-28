@@ -4,14 +4,14 @@ use argon2::{
     PasswordVerifier,
 };
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::{header, HeaderMap, StatusCode},
     response::{Html, IntoResponse, Redirect,Response},
     Json,
 };
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use crate::structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse,MyClassesResponse,Course,AddUserCourseRequest,Class};
+use crate::structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse,MyClassesResponse,Course,AddUserCourseRequest,Class,CourseQuery};
 use crate::database_functions;
 
 fn create_jwt(user_id: i64, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
@@ -299,10 +299,12 @@ pub async fn add_user_courses(State(state): State<AppState>,headers: HeaderMap,J
     Ok(Json("Ok".to_string()))
 }
 
-pub async fn get_course_content(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<Vec<String>>,Response>{
+pub async fn get_course_content(State(state): State<AppState>,Query(params): Query<CourseQuery>,headers: HeaderMap) -> Result<Json<Vec<String>>,Response>{
     let claims = verify_token(&headers, &state.jwt_secret).ok_or(unauthorized_with_clear_cookie())?;
     let user_id: i64 = claims.sub.parse().map_err(|_| unauthorized_with_clear_cookie())?;
     //let response = sqlx::query_as("SELECT title FROM levels WHERE ");
+    let course_id: i64 = params.id;
+    println!("{}",course_id);
     Ok(vec!["qwe".to_string()].into())
 }
 

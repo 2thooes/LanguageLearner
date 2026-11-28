@@ -77,13 +77,12 @@ function renderCoursesByLang(lang) {
     }
 
 async function renderCourseContent(pane,data,index){
-    
     pane.innerHTML = `
         <h2>какой то курс(удали меня)</h2>
         <p id="courseBody">Loading...</p>
     `;
     // Запрос к БД за содержимым конкретного курса
-    const res = await fetch(`/api/course?id=${encodeURIComponent(index)}`, { credentials: 'same-origin' });
+    const res = await fetch(`/api/course?id=${encodeURIComponent(realCourses[index].id)}`, { credentials: 'same-origin' });
     const bodyEl = document.getElementById('courseBody');
     if (!bodyEl) return;
 

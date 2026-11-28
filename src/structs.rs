@@ -70,3 +70,8 @@ pub struct AddUserCourseRequest {
     pub primary_language: String,
     pub chosen_language: String,
 }
+
+#[derive(Deserialize)]
+pub struct CourseQuery {
+    pub id: i64,
+}
