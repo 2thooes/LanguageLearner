@@ -17,11 +17,11 @@ function renderSidebar(activeType, activeIndex = null) {
     const list = document.getElementById('coursesList');
     list.innerHTML = '';
 
-    realCourses.forEach((title, index) => {
+    realCourses.forEach((course, index) => {
         const li = document.createElement('li');
         const link = document.createElement('a');
         link.href = `?course=${index}`;
-        link.textContent = title;
+        link.textContent = course.title;
 
         if (activeType === 'course' && activeIndex === index) {
             link.classList.add('active');
@@ -103,6 +103,7 @@ async function renderUsersLanguageSelector(pane,data){
     `;//creating html template for future content
     
     const languageSet = new Set(); //Selcting only user languages
+    console.log(data);
     for (const course of data) {
         if (course.user_language_code) {
             languageSet.add(course.user_language_code);
@@ -186,16 +187,16 @@ async function openView(type, index = null) {
     if (type === 'add') {
         const params = new URLSearchParams(window.location.search);
         if (params.has('lang')) {
-            renderTargetLanguageSelector(pane,data).await;
+            await renderTargetLanguageSelector(pane,data);
             return;
         }
         else{
-            renderUsersLanguageSelector(pane,data).await;
+            await renderUsersLanguageSelector(pane,data);
             return;
         }
     }
     else{
-        renderCourseContent(pane,data,index).await;
+        await renderCourseContent(pane,data,index);
         return;
     }
     
@@ -245,11 +246,10 @@ async function initStudyPage() {
         return;
     }
     const coursesData = await coursesRes.json();
-
     // На случай если бэкенд пока всё ещё кладёт "Add new" последним элементом в массив
-    const rawList = Array.isArray(coursesData.courses) ? coursesData.courses : [];
-    realCourses = rawList.filter((item) => item !== 'Add new');// change
-
+    realCourses = Array.isArray(coursesData.courses) ? coursesData.courses : [];
+    console.log(realCourses);
+    
     syncWithUrl();
 }
 

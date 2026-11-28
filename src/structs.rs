@@ -44,7 +44,12 @@ pub struct MeResponse {
 
 #[derive(Serialize)]
 pub struct MyClassesResponse {
-    pub courses: Vec<String>,
+    pub courses: Vec<Class>,
+}
+#[derive(Serialize, FromRow)]
+pub struct Class {
+    pub id: u64,
+    pub title: String,
 }
 
 #[derive(Serialize)]

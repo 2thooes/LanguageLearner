@@ -11,7 +11,7 @@ use axum::{
 };
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use crate::structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse,MyClassesResponse,Course,AddUserCourseRequest};
+use crate::structs::{AppState, AuthRequest, AuthResponse, Claims,MeResponse,MyClassesResponse,Course,AddUserCourseRequest,Class};
 use crate::database_functions;
 
 fn create_jwt(user_id: i64, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
@@ -224,7 +224,7 @@ pub async fn my_courses_handler(State(state): State<AppState>,headers: HeaderMap
         None => return Err(unauthorized_with_clear_cookie()),
     };
     // 2. Одним запросом через JOIN получаем все названия курсов пользователя
-    let mut courses: Vec<String> = sqlx::query_scalar("SELECT c.title FROM courses c JOIN user_courses uc ON c.id = uc.course_id WHERE uc.user_id = ?")
+    let mut courses: Vec<Class> = sqlx::query_as("SELECT c.title, id FROM courses c JOIN user_courses uc ON c.id = uc.course_id WHERE uc.user_id = ?")
         .bind(user_id)
         .fetch_all(&state.pool)
         .await
@@ -300,6 +300,9 @@ pub async fn add_user_courses(State(state): State<AppState>,headers: HeaderMap,J
 }
 
 pub async fn get_course_content(State(state): State<AppState>,headers: HeaderMap) -> Result<Json<Vec<String>>,Response>{
+    let claims = verify_token(&headers, &state.jwt_secret).ok_or(unauthorized_with_clear_cookie())?;
+    let user_id: i64 = claims.sub.parse().map_err(|_| unauthorized_with_clear_cookie())?;
+    //let response = sqlx::query_as("SELECT title FROM levels WHERE ");
     Ok(vec!["qwe".to_string()].into())
 }
 
